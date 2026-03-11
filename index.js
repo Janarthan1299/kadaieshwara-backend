@@ -10,22 +10,42 @@ const employeeRoutes = require("./routes/employeeRoutes");
 
 const app = express();
 
-app.use(express.json());
+// Allowed origins for CORS
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://kadaieshwara-frontend-mbjx.vercel.app'
+];
 
 // CORS configuration for Vercel deployment
 const corsOptions = {
-  origin: [
-    'http://localhost:3000',
-    'https://kadaieshwara-frontend-mbjx.vercel.app'
-  ],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 };
-app.use(cors(corsOptions));
 
-// Handle preflight requests
-app.options('*', cors(corsOptions));
+// Handle preflight requests explicitly - MUST be before other routes
+app.options('*', (req, res) => {
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.sendStatus(200);
+});
+
+app.use(cors(corsOptions));
+app.use(express.json());
 
 mongoose
   .connect(
@@ -41,6 +61,14 @@ app.use("/api/stock", stockRoutes);
 app.use("/api/inward", inwardRoutes);
 app.use("/api/stitching", stitchingRoutes);
 app.use("/api/employees", employeeRoutes);
+
+// Also mount routes without /api prefix for flexibility
+app.use("/admin", adminRoutes);
+app.use("/bills", billRoutes);
+app.use("/stock", stockRoutes);
+app.use("/inward", inwardRoutes);
+app.use("/stitching", stitchingRoutes);
+app.use("/employees", employeeRoutes);
 
 app.get("/", (req, res) => {
   res.send("Backend Running Successfully");
