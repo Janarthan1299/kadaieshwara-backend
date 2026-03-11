@@ -1,6 +1,5 @@
 const express = require("express");
 const mongoose = require("mongoose");
-const cors = require("cors");
 const adminRoutes = require("./routes/adminRoutes");
 const billRoutes = require("./routes/billRoutes");
 const stockRoutes = require("./routes/stockRoutes");
@@ -16,35 +15,34 @@ const allowedOrigins = [
   'https://kadaieshwara-frontend-mbjx.vercel.app'
 ];
 
-// CORS configuration for Vercel deployment
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, curl, etc.)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-};
-
-// Handle preflight requests explicitly - MUST be before other routes
+// Handle preflight requests explicitly - MUST be before other middleware
 app.options('*', (req, res) => {
   const origin = req.headers.origin;
   if (allowedOrigins.includes(origin)) {
     res.header('Access-Control-Allow-Origin', origin);
+  } else {
+    res.header('Access-Control-Allow-Origin', 'https://kadaieshwara-frontend-mbjx.vercel.app');
   }
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.header('Access-Control-Allow-Credentials', 'true');
-  res.sendStatus(200);
+  return res.status(200).end();
 });
 
-app.use(cors(corsOptions));
+// CORS middleware for all requests
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  } else {
+    res.header('Access-Control-Allow-Origin', 'https://kadaieshwara-frontend-mbjx.vercel.app');
+  }
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  next();
+});
+
 app.use(express.json());
 
 mongoose
