@@ -58,15 +58,21 @@ router.post("/switch", async (req, res) => {
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
+    console.log("Login attempt for:", email);
 
     // Check if admin exists
     const admin = await Admin.findOne({ email });
     if (!admin) {
+      console.log("Admin not found for email:", email);
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
+    console.log("Admin found:", admin.email);
+
     // Check password
     const isMatch = await bcrypt.compare(password, admin.password);
+    console.log("Password match:", isMatch);
+    
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid credentials" });
     }
