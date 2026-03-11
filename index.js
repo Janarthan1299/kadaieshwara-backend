@@ -45,12 +45,38 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 
-mongoose
-  .connect(
-    "mongodb+srv://admin:admin123@cluster0.tujvwxu.mongodb.net/?appName=Cluster0"
-  )
-  .then(() => console.log("MongoDB Connected"))
-  .catch((err) => console.log("Mongo Error:", err));
+// MongoDB connection with caching for serverless
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://admin:admin123@cluster0.tujvwxu.mongodb.net/?appName=Cluster0";
+
+let cachedDb = null;
+
+const connectToDatabase = async () => {
+  if (cachedDb && mongoose.connection.readyState === 1) {
+    return cachedDb;
+  }
+  
+  try {
+    const db = await mongoose.connect(MONGODB_URI, {
+      bufferCommands: false,
+    });
+    cachedDb = db;
+    console.log("MongoDB Connected");
+    return db;
+  } catch (err) {
+    console.log("MongoDB Error:", err);
+    throw err;
+  }
+};
+
+// Middleware to ensure DB connection before handling requests
+app.use(async (req, res, next) => {
+  try {
+    await connectToDatabase();
+    next();
+  } catch (err) {
+    res.status(500).json({ error: "Database connection failed" });
+  }
+});
 
 // Routes
 app.use("/api/admin", adminRoutes);
@@ -70,6 +96,12 @@ app.use("/employees", employeeRoutes);
 
 app.get("/", (req, res) => {
   res.send("Backend Running Successfully");
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error("Error:", err.message);
+  res.status(500).json({ error: err.message || "Internal Server Error" });
 });
 
 // Export for Vercel serverless
