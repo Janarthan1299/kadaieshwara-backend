@@ -11,7 +11,21 @@ const employeeRoutes = require("./routes/employeeRoutes");
 const app = express();
 
 app.use(express.json());
-app.use(cors());
+
+// CORS configuration for Vercel deployment
+const corsOptions = {
+  origin: [
+    'http://localhost:3000',
+    'https://kadaieshwara-frontend-mbjx.vercel.app'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+app.use(cors(corsOptions));
+
+// Handle preflight requests
+app.options('*', cors(corsOptions));
 
 mongoose
   .connect(
@@ -32,7 +46,13 @@ app.get("/", (req, res) => {
   res.send("Backend Running Successfully");
 });
 
-const PORT = 5000;
-app.listen(PORT, () => {
-  console.log(`Server started on port ${PORT}`);
-});
+// Export for Vercel serverless
+module.exports = app;
+
+// Only listen when running locally (not on Vercel)
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`Server started on port ${PORT}`);
+  });
+}
